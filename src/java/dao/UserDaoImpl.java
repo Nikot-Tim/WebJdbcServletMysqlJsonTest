@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import model.User;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.stereotype.Component;
 
 import java.io.IOException;
@@ -21,9 +20,6 @@ import java.util.List;
 @Component
 public class UserDaoImpl implements UserDao{
 
-    @Autowired
-    private DbConnection dbConnection;
-
     private static final String INSERT_USERS_SQL = "INSERT INTO users" + "  (name, email, country) VALUES " + " (?, ?, ?);";
     private static final String SELECT_USER_BY_ID = "select id,name,email,country from users where id =?";
     private static final String SELECT_ALL_USERS = "select * from users";
@@ -34,7 +30,7 @@ public class UserDaoImpl implements UserDao{
 
     @Override
     public boolean saveUser(User user) throws SQLException, IOException {
-        try(PreparedStatement preparedStatement = dbConnection.getConnection().prepareStatement(INSERT_USERS_SQL)) {
+        try(PreparedStatement preparedStatement = DbConnection.getConnection().prepareStatement(INSERT_USERS_SQL)) {
             preparedStatement.setString(1, user.getName());
             preparedStatement.setString(2, user.getEmail());
             preparedStatement.setString(3, user.getCountry());
@@ -44,7 +40,7 @@ public class UserDaoImpl implements UserDao{
 
     @Override
     public User findUserById(int id) throws SQLException, IOException {
-        try(PreparedStatement preparedStatement = dbConnection.getConnection().prepareStatement(SELECT_USER_BY_ID)) {
+        try(PreparedStatement preparedStatement = DbConnection.getConnection().prepareStatement(SELECT_USER_BY_ID)) {
             preparedStatement.setInt(1, id);
 
             ResultSet resultSet = preparedStatement.executeQuery();
@@ -62,7 +58,7 @@ public class UserDaoImpl implements UserDao{
 
     @Override
     public List<User> findAll() throws SQLException, IOException {
-        try(PreparedStatement preparedStatement = dbConnection.getConnection().prepareStatement(SELECT_ALL_USERS)) {
+        try(PreparedStatement preparedStatement = DbConnection.getConnection().prepareStatement(SELECT_ALL_USERS)) {
             ResultSet resultSet = preparedStatement.executeQuery();
             List<User> users = new ArrayList<>();
             while (resultSet.next()) {
@@ -78,7 +74,7 @@ public class UserDaoImpl implements UserDao{
 
     @Override
     public boolean deleteUser(int id) throws IOException, SQLException {
-        try(PreparedStatement preparedStatement = dbConnection.getConnection().prepareStatement(DELETE_USER_SQL)){
+        try(PreparedStatement preparedStatement = DbConnection.getConnection().prepareStatement(DELETE_USER_SQL)){
             preparedStatement.setInt(1,id);
             return preparedStatement.executeUpdate() > 0;
         }
@@ -86,7 +82,7 @@ public class UserDaoImpl implements UserDao{
 
     @Override
     public boolean updateUser(User user) throws IOException, SQLException {
-        try(PreparedStatement preparedStatement = dbConnection.getConnection().prepareStatement(UPDATE_USER_SQL)){
+        try(PreparedStatement preparedStatement = DbConnection.getConnection().prepareStatement(UPDATE_USER_SQL)){
             preparedStatement.setString(1, user.getName());
             preparedStatement.setString(2, user.getEmail());
             preparedStatement.setString(3, user.getCountry());

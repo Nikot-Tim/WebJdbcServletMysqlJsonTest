@@ -10,15 +10,16 @@ import org.springframework.beans.factory.stereotype.Component;
 import org.springframework.beans.factory.stereotype.Service;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.*;
 
 public class BeanFactory {
+
     private Map<String, Object> singletons = new HashMap();
 
     public Object getBean(String beanName){
@@ -26,44 +27,73 @@ public class BeanFactory {
     }
 
     private List<BeanPostProcessor> postProcessors = new ArrayList<>();
+
     public void addPostProcessor(BeanPostProcessor postProcessor){
         postProcessors.add(postProcessor);
     }
 
-    public void instantiate(String basePackage) throws IOException, URISyntaxException, ClassNotFoundException, IllegalAccessException, InstantiationException {
-        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+    public void instantiate() throws URISyntaxException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 
-        String path = basePackage.replace(".","/");
-        System.out.println(path);
-        Enumeration<URL> resources = classLoader.getResources(path);
-        while (resources.hasMoreElements()){
-            URL resource = resources.nextElement();
-            File file = new File(resource.toURI());
-            for(File classFile : Objects.requireNonNull(file.listFiles(), "The package is empty")){
-                String fileName = classFile.getName();
-                System.out.println(fileName);
-                if(fileName.endsWith(".class")){
-                    String className = fileName.substring(0,fileName.lastIndexOf("."));
+        ClassLoader classLoader = BeanFactory.class.getClassLoader();
 
-                    Class classObject = Class.forName(basePackage + "." + className);
+        URL[] urls = ((URLClassLoader) classLoader).getURLs();
 
-                    if(classObject.isAnnotationPresent(Component.class) || classObject.isAnnotationPresent(Service.class)){
-                        System.out.println("Component: " + classObject);
-                        Object instance = classObject.newInstance();
-                        String beanName  = className.substring(0,1).toLowerCase() + className.substring(1);
-                        singletons.put(beanName,instance);
-                    }
+        int flag = 0;
+
+        for (URL url : urls){
+            if(flag == 0) {
+                File fileDir = new File(url.toURI());
+                String classLocationStart = "";
+                classFinder(fileDir, classLocationStart);
+                flag++;
+            }
+        }
+        System.out.println(singletons);
+    }
+
+    private void classFinder(File fileDir, String classLocationStart) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+        for(File classFile : Objects.requireNonNull(fileDir.listFiles())){
+            String fileName = classFile.getName();
+            System.out.println(fileName);
+            if(classFile.isDirectory()){
+                String classLocation = classLocationStart + getClassLocation(classFile);
+                classFinder(classFile, classLocation);
+            }
+            else if(fileName.endsWith(".class")){
+
+                String classLocation = classLocationStart + getClassLocation(classFile).substring(0 , fileName.lastIndexOf("."));
+
+                Class classObject = Class.forName(classLocation);
+
+                if(classObject.isAnnotationPresent(Component.class) || classObject.isAnnotationPresent(Service.class)){
+                    System.out.println("Component: " + classObject);
+                    Object instance = classObject.newInstance();
+                    String beanName  = fileName.substring(0,1).toLowerCase() + fileName.substring(1, fileName.lastIndexOf("."));
+                    singletons.put(beanName,instance);
                 }
             }
         }
+        try {
+            populateProperties();
+        } catch (NoSuchMethodException | InvocationTargetException e) {
+            e.printStackTrace();
+        }
     }
-    public void populateProperties() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        System.out.println("populateProperties");
-        System.out.println(singletons);
+
+    private String getClassLocation(File fileDir) {
+        return fileDir
+                .toString()
+                .substring(fileDir
+                        .toString()
+                        .lastIndexOf("\\") + 1)
+                .replace("/", ".") + ".";
+    }
+
+
+    private void populateProperties() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         for(Object object : singletons.values()){
             for(Field field : object.getClass().getDeclaredFields()){
                 if(field.isAnnotationPresent(Autowired.class)){
-
                     for(Object dependency : singletons.values()){
                         if(dependency.getClass().equals(field.getType())){
                             String setterName = "set" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
@@ -110,9 +140,7 @@ public class BeanFactory {
                 if (method.isAnnotationPresent(PreDestroy.class)) {
                     try {
                         method.invoke(bean);
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                    } catch (InvocationTargetException e) {
+                    } catch (IllegalAccessException | InvocationTargetException e) {
                         e.printStackTrace();
                     }
                 }

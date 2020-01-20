@@ -1,17 +1,17 @@
 package web;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import model.User;
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
 import org.springframework.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.stereotype.Component;
 import service.UserService;
 
-import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Getter
 @Setter
@@ -29,50 +30,24 @@ import java.sql.SQLException;
 @WebServlet("/")
 public class UserServlet extends HttpServlet {
     @Autowired
-    private UserService userService;
-
-    private String realPath = getServletContext().getRealPath(".");
+    private UserService userService = (UserService) new BeanFactory().getBean("userService");
 
     static {
         BeanFactory beanFactory = new BeanFactory();
         try {
+            beanFactory.instantiate();
 
-            beanFactory.instantiate("src.java.connection");
-            beanFactory.populateProperties();
-            beanFactory.instantiate("src.java.dao");
-            beanFactory.populateProperties();
-            beanFactory.instantiate("src.java.model");
-            beanFactory.populateProperties();
-            beanFactory.instantiate("src.java.service");
-            beanFactory.populateProperties();
-            beanFactory.instantiate("src.java.web");
-            beanFactory.populateProperties();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+        } catch (URISyntaxException | InstantiationException | IllegalAccessException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-
-        beanFactory.injectBeanNames();
-        beanFactory.initializeBeans();
     }
 
     private static final long serialVersionUID = 1;
 
-    public void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    public void doPost(HttpServletRequest req, HttpServletResponse resp) throws  IOException {
         doGet(req, resp);
     }
-    public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException{
+    public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException{
         String path = req.getServletPath();
 
         try {
@@ -132,11 +107,9 @@ public class UserServlet extends HttpServlet {
 
     private void returnJson(HttpServletResponse resp, String operation, boolean success) throws IOException, SQLException {
         ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode jsonNode = objectMapper.createObjectNode();
-        ((org.codehaus.jackson.node.ObjectNode) jsonNode).put(
-                "users", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(userService.findAllUsers())
-        );
-        ((org.codehaus.jackson.node.ObjectNode) jsonNode).put(operation, success);
+        ObjectNode jsonNode = objectMapper.createObjectNode();
+        jsonNode.put("users", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(userService.findAllUsers()));
+        jsonNode.put(operation, success);
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         PrintWriter writer = resp.getWriter();
