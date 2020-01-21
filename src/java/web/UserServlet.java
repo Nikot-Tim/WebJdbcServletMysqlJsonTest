@@ -1,15 +1,10 @@
 package web;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import model.User;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 import org.springframework.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.stereotype.Component;
 import service.UserService;
 
 import javax.servlet.annotation.WebServlet;
@@ -22,22 +17,30 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 
-@EqualsAndHashCode(callSuper = true)
-@Data
-@Getter
-@Setter
-@Component
 @WebServlet("/")
 public class UserServlet extends HttpServlet {
-    @Autowired
-    private UserService userService = (UserService) new BeanFactory().getBean("userService");
 
-    static {
+    @Autowired
+    private UserService userService;
+
+    public void setUserService(UserService userService) {
+        this.userService = userService;
+    }
+
+    public UserServlet() {
+        onInit();
+    }
+
+    private void onInit() {
         BeanFactory beanFactory = new BeanFactory();
         try {
             beanFactory.instantiate();
+            beanFactory.populateProperties();
+            beanFactory.autowiredScan(this);
 
-        } catch (URISyntaxException | InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+        } catch (URISyntaxException | InstantiationException |
+                IllegalAccessException | ClassNotFoundException |
+                NoSuchMethodException | InvocationTargetException e) {
             e.printStackTrace();
         }
     }
@@ -113,6 +116,6 @@ public class UserServlet extends HttpServlet {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         PrintWriter writer = resp.getWriter();
-        writer.println(jsonNode);
+        writer.println(jsonNode.toString());
     }
 }

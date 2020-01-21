@@ -34,7 +34,7 @@ public class UserDaoImpl implements UserDao{
             preparedStatement.setString(1, user.getName());
             preparedStatement.setString(2, user.getEmail());
             preparedStatement.setString(3, user.getCountry());
-            return preparedStatement.execute();
+            return !preparedStatement.execute();
         }
     }
 
@@ -87,7 +87,7 @@ public class UserDaoImpl implements UserDao{
             preparedStatement.setString(2, user.getEmail());
             preparedStatement.setString(3, user.getCountry());
             preparedStatement.setInt(4, user.getId());
-            return preparedStatement.executeUpdate() > 1;
+            return preparedStatement.executeUpdate() > 0;
         }
     }
 

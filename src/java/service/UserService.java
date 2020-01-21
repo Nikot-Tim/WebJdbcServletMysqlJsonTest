@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import model.User;
-import org.springframework.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.stereotype.Service;
 
@@ -20,7 +19,9 @@ import java.util.List;
 public class UserService {
 
     @Autowired
-    private UserDaoImpl userDaoImpl = (UserDaoImpl) new BeanFactory().getBean("userDaoImpl");
+    private UserDaoImpl userDaoImpl;
+
+    public UserService() {}
 
     public boolean addUser(User user) throws IOException, SQLException {
         return userDaoImpl.saveUser(user);

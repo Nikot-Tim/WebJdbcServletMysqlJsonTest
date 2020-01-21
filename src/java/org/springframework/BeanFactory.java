@@ -73,11 +73,6 @@ public class BeanFactory {
                 }
             }
         }
-        try {
-            populateProperties();
-        } catch (NoSuchMethodException | InvocationTargetException e) {
-            e.printStackTrace();
-        }
     }
 
     private String getClassLocation(File fileDir) {
@@ -90,17 +85,21 @@ public class BeanFactory {
     }
 
 
-    private void populateProperties() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    public void populateProperties() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         for(Object object : singletons.values()){
-            for(Field field : object.getClass().getDeclaredFields()){
-                if(field.isAnnotationPresent(Autowired.class)){
-                    for(Object dependency : singletons.values()){
-                        if(dependency.getClass().equals(field.getType())){
-                            String setterName = "set" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
-                            System.out.println("Setter name = " + setterName);
-                            Method setter = object.getClass().getMethod(setterName, dependency.getClass());
-                            setter.invoke(object, dependency);
-                        }
+            autowiredScan(object);
+        }
+    }
+
+    public void autowiredScan(Object object) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        for(Field field : object.getClass().getDeclaredFields()){
+            if(field.isAnnotationPresent(Autowired.class)){
+                for(Object dependency : singletons.values()){
+                    if(dependency.getClass().equals(field.getType())){
+                        String setterName = "set" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
+                        System.out.println("Setter name = " + setterName);
+                        Method setter = object.getClass().getMethod(setterName, dependency.getClass());
+                        setter.invoke(object, dependency);
                     }
                 }
             }
